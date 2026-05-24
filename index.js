@@ -2,17 +2,36 @@ const { Client, LocalAuth, MessageMedia } = require("whatsapp-web.js");
 const express = require("express");
 const { Server } = require("socket.io");
 const http = require("http");
-const ffmpeg = require("ffmpeg-static");
 const axios = require("axios");
+const { execSync } = require("child_process");
 
 async function createTextStickerImage(text) {
+  const url = `https://aqul-brat.hf.space/api/brat?text=${encodeURIComponent(text)}`;
+  const response = await axios.get(url, { responseType: "arraybuffer" });
+  return Buffer.from(response.data).toString("base64");
+}
+
+function getChromiumPath() {
+  const candidates = [
+    "/data/data/com.termux/files/usr/bin/chromium-browser",
+    "/data/data/com.termux/files/usr/bin/chromium",
+    "/usr/bin/chromium-browser",
+    "/usr/bin/chromium",
+  ];
+  for (const p of candidates) {
+    try {
+      execSync(`test -f ${p}`);
+      return p;
+    } catch {}
+  }
+  return null;
+}
+
+function getFfmpegPath() {
   try {
-    const url = `https://aqul-brat.hf.space/api/brat?text=${encodeURIComponent(text)}`;
-    const response = await axios.get(url, { responseType: "arraybuffer" });
-    return Buffer.from(response.data).toString("base64");
-  } catch (error) {
-    console.error("Gagal mengambil gambar dari API Brat:", error);
-    throw error;
+    return execSync("which ffmpeg").toString().trim();
+  } catch {
+    return null;
   }
 }
 
@@ -21,26 +40,53 @@ const server = http.createServer(app);
 const io = new Server(server);
 const SERVER_PORT = 3000;
 
-// Sticker info
 const stickerAuthor = "tedidevv1";
 const stickerName = "tedidevv1 Bot";
 const stickerNameBratBot = "Brat Bot";
 
 app.use(express.static("public"));
 
+const chromiumPath = getChromiumPath();
+const ffmpegPath = getFfmpegPath();const puppeteerConfig = {
+  headless: true,
+  args: [
+    "--no-sandbox",
+    "--disable-setuid-sandbox",
+    "--disable-dev-shm-usage",
+    "--disable-accelerated-2d-canvas",
+    "--no-first-run",
+    "--no-zygote",
+    "--disable-gpu",
+    "--single-process",
+    "--disable-extensions",
+    "--disable-background-networking",
+    "--disable-sync",
+    "--disable-translate",
+    "--hide-scrollbars",
+    "--mute-audio",
+    "--headless=new",
+    "--disable-software-rasterizer",
+    "--disable-dbus",
+    "--disable-features=site-per-process",
+    "--js-flags=--max-old-space-size=256",
+    "--memory-pressure-off",
+    "--disable-web-security",
+  ],
+};
+
+
+
+if (chromiumPath) {
+  puppeteerConfig.executablePath = chromiumPath;
+}
+
 const client = new Client({
   authStrategy: new LocalAuth(),
-  ffmpegPath: ffmpeg,
-  puppeteer: {
-    args: [
-      "--no-sandbox",
-      "--disable-setuid-sandbox",
-      "--disable-dev-shm-usage",
-      "--disable-accelerated-2d-canvas",
-      "--no-first-run",
-      "--no-zygote",
-      "--disable-gpu",
-    ],
+  ffmpegPath: ffmpegPath,
+  puppeteer: puppeteerConfig,
+  webVersionCache: {
+    type: "remote",
+    remotePath: "https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.2412.54.html",
   },
 });
 
@@ -66,10 +112,7 @@ client.on("authenticated", () => {
 
 client.on("auth_failure", (msg) => {
   console.error("Authentication failure:", msg);
-  io.emit(
-    "message",
-    "Waduh, gagal autentikasi. Coba restart start.bat nya ya.",
-  );
+  io.emit("message", "Waduh, gagal autentikasi. Coba restart start.bat nya ya.");
 });
 
 client.on("ready", () => {
@@ -79,7 +122,6 @@ client.on("ready", () => {
 });
 
 client.on("message_create", async (msg) => {
-  // ketik !sticker atau !s
   if (msg.body === "!sticker" || msg.body === "!s") {
     try {
       if (msg.hasMedia) {
@@ -99,14 +141,10 @@ client.on("message_create", async (msg) => {
             stickerAuthor: stickerAuthor,
           });
         } else {
-          await msg.reply(
-            "Ealah, pesan yang kamu bales ngga ada gambar/videonya tuh.",
-          );
+          await msg.reply("Ealah, pesan yang kamu bales ngga ada gambar/videonya tuh.");
         }
       } else {
-        await msg.reply(
-          "Kirim gambar/video terus kasih caption *!sticker*, atau balas aja medianya pake *!sticker* ya.",
-        );
+        await msg.reply("Kirim gambar/video terus kasih caption *!sticker*, atau balas aja medianya pake *!sticker* ya.");
       }
     } catch (error) {
       console.error("Error saat membuat stiker:", error);
@@ -114,21 +152,17 @@ client.on("message_create", async (msg) => {
     }
   }
 
-  // ketik !brat atau !tts ya
   if (
     msg.body.startsWith("!tts") ||
     msg.body.startsWith("!ttp") ||
     msg.body.startsWith("!brat")
   ) {
-    // regex check
     const prefixMatch = msg.body.match(/^!(tts|ttp|brat)/i);
     if (!prefixMatch) return;
 
     const text = msg.body.slice(prefixMatch[0].length).trim();
     if (!text) {
-      return await msg.reply(
-        "Silakan masukkan teksnya! Contoh: *!brat Halo semuanya*",
-      );
+      return await msg.reply("Silakan masukkan teksnya! Contoh: *!brat Halo semuanya*");
     }
 
     try {
@@ -141,9 +175,7 @@ client.on("message_create", async (msg) => {
       });
     } catch (error) {
       console.error("Error saat membuat teks ke stiker:", error);
-      await msg.reply(
-        "Yah, gagal bikin stiker teksnya :( Coba lagi nanti ya (Mungkin server apinya lagi sibuk).",
-      );
+      await msg.reply("Yah, gagal bikin stiker teksnya :( Coba lagi nanti ya (Mungkin server apinya lagi sibuk).");
     }
   }
 });
