@@ -91,7 +91,7 @@ const client = new Client({
 });
 
 io.on("connection", (socket) => {
-  socket.emit("message", "Lagi nyiapin bot tedidevv1 nih...");
+  socket.emit("message", "Wet bot nya lagi siap siap");
 });
 
 client.on("loading_screen", (percent, message) => {
@@ -118,7 +118,7 @@ client.on("auth_failure", (msg) => {
 client.on("ready", () => {
   console.log("Client is ready!");
   io.emit("ready", "Sip, tersambung!");
-  io.emit("message", "Botnya udah siap tempur nih.");
+  io.emit("message", "Botnya udah siap nih.");
 });
 
 client.on("message_create", async (msg) => {
@@ -141,13 +141,13 @@ client.on("message_create", async (msg) => {
             stickerAuthor: stickerAuthor,
           });
         } else {
-          await msg.reply("Ealah, pesan yang kamu bales ngga ada gambar/videonya tuh.");
+          await msg.reply("Woilah, pesan yg ente bales gda gambar/videonya.");
         }
       } else {
         await msg.reply("Kirim gambar/video terus kasih caption *!sticker*, atau balas aja medianya pake *!sticker* ya.");
       }
     } catch (error) {
-      console.error("Error saat membuat stiker:", error);
+      console.error("Ada yang Eror loh ya:", error);
       await msg.reply("Yah, ada error waktu bikin stikernya :( Coba lagi ya!");
     }
   }
@@ -162,7 +162,7 @@ client.on("message_create", async (msg) => {
 
     const text = msg.body.slice(prefixMatch[0].length).trim();
     if (!text) {
-      return await msg.reply("Silakan masukkan teksnya! Contoh: *!brat Halo semuanya*");
+      return await msg.reply("Masukin teksnya! Contoh: *!brat Halo semuanya*");
     }
 
     try {
