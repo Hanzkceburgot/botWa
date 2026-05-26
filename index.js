@@ -40,8 +40,8 @@ const server = http.createServer(app);
 const io = new Server(server);
 const SERVER_PORT = 3000;
 
-const stickerAuthor = "tedidevv1";
-const stickerName = "tedidevv1 Bot";
+const stickerAuthor = "Hanzkceburgot";
+const stickerName = "HanzSticker";
 const stickerNameBratBot = "Brat Bot";
 
 app.use(express.static("public"));
